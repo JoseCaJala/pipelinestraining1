@@ -78,5 +78,6 @@ dotnet add myApp.Tests/myApp.Tests.csproj reference myApp/myApp.csproj
 - dotnet tool install dotnet-reportgenerator-globaltool --tool-path $DOTNET_TOOLS_PATH
 - ."$DOTNET_TOOLS_PATH\reportgenerator.exe" -reports:reports\coverage.cobertura.xml -targetdir:reports\coveragereport -reporttypes:Html
 
+hola
  -->
  
