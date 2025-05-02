@@ -1,36 +1,113 @@
-# This is a basic workflow to help you get started with Actions
+name: CI/CD Pipeline
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - joseCastro_p1_base
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+env:
+  DOTNET_TOOLS_PATH: "./tools"
+  NUGET_PATH: "./packages"
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    runs-on: self-hosted
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+  test:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Install JetBrains ReSharper tools
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          mkdir -p $HOME/.dotnet/tools
+          dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path DOTNET_TOOLS_PATH
+        
+      - name: Run code inspection
+        run: |
+          mkdir -p myApp/reports
+          $HOME/.dotnet/tools/jb inspectcode ./TrainProject.sln -o=myApp/reports/report.xml
+
+      - name: Validate report
+        run: |
+          cd scripts
+          pwsh ./validate_report.ps1
+
+      - name: Install coverage tools
+        run: |
+          cd myApp.Tests
+          mkdir -p reports
+          dotnet add package coverlet.msbuild --package-directory $NUGET_PATH
+
+      - name: Run unit tests with coverage
+        run: |
+          cd myApp.Tests
+          dotnet test -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:CoverletOutput=reports/coverage
+
+      - name: Validate coverage
+        run: |
+          cd scripts
+          pwsh ./validate_coverage.ps1
+
+      - name: Generate HTML coverage report
+        run: |
+          cd myApp.Tests
+          dotnet tool install dotnet-reportgenerator-globaltool --tool-path DOTNET_TOOLS_PATH
+          $HOME/.dotnet/tools/reportgenerator -reports:reports/coverage.cobertura.xml -targetdir:reports/coveragereport -reporttypes:Html
+
+  publish:
+    needs: test
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish app
+        run: |
+          dotnet publish myApp/myApp.csproj -c Release -o ./publish
+
+  deploy-dev:
+    needs: publish
+    runs-on: self-hosted
+    steps:
+      - name: Deploy to runner host
+        run: |
+          mkdir -p $HOME/deployments/myApp
+          
+          cp -r ./publish/* $HOME/deployments/myApp/
+          
+          chmod +x $HOME/deployments/myApp/myApp
+          
+          echo "Aplication deployed: $HOME/deployments/myApp"
