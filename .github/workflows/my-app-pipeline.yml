@@ -10,7 +10,7 @@ env:
   NUGET_PATH: "./packages"
 
 jobs:
-  build:
+  ci-cd:
     runs-on: self-hosted
     steps:
       - name: Checkout code
@@ -22,21 +22,11 @@ jobs:
       - name: Build
         run: dotnet build TrainProject.sln
 
-  test:
-    needs: build
-    runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Restore dependencies
-        run: dotnet restore
-
       - name: Install JetBrains ReSharper tools
         run: |
           mkdir -p $HOME/.dotnet/tools
           dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path DOTNET_TOOLS_PATH
-        
+
       - name: Run code inspection
         run: |
           mkdir -p myApp/reports
@@ -69,30 +59,13 @@ jobs:
           dotnet tool install dotnet-reportgenerator-globaltool --tool-path DOTNET_TOOLS_PATH
           $HOME/.dotnet/tools/reportgenerator -reports:reports/coverage.cobertura.xml -targetdir:reports/coveragereport -reporttypes:Html
 
-  publish:
-    needs: test
-    runs-on: self-hosted
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Restore dependencies
-        run: dotnet restore
-
       - name: Publish app
         run: |
           dotnet publish myApp/myApp.csproj -c Release -o ./publish
 
-  deploy-dev:
-    needs: publish
-    runs-on: self-hosted
-    steps:
       - name: Deploy to runner host
         run: |
           mkdir -p $HOME/deployments/myApp
-          
           cp -r ./publish/* $HOME/deployments/myApp/
-          
           chmod +x $HOME/deployments/myApp/myApp
-          
-          echo "Aplication deployed: $HOME/deployments/myApp"
+          echo "Application deployed: $HOME/deployments/myApp"
