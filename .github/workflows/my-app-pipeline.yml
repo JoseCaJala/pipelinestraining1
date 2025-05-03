@@ -16,6 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Wait after checkout (optional workaround)
+        run: |
+          echo "Waiting for any locked resources to free up..."
+          sleep 3
+          
       - name: Restore dependencies
         run: dotnet restore
 
