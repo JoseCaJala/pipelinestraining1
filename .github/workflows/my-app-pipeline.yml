@@ -6,8 +6,8 @@ on:
       - joseCastro_p1_base
 
 env:
-  DOTNET_TOOLS_PATH: tools
-  NUGET_PATH: packages
+   DOTNET_TOOLS_PATH: ./tools
+   NUGET_PATH: ./tools/nuget-packages
 
 jobs:
   ci-cd:
@@ -29,12 +29,12 @@ jobs:
 
       - name: Install JetBrains ReSharper tools
         run: |
-          dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path ${{ env.DOTNET_TOOLS_PATH }}
+          dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path ./tools
 
       - name: Run code inspection
         run: |
           mkdir "myApp\reports"
-          "${{ env.DOTNET_TOOLS_PATH }}\jb.exe" inspectcode "TrainProject.sln" -o="myApp\reports\report.xml" -f="xml"
+          ./tools/jb.exe inspectcode TrainProject.sln -o="myApp/reports/report.xml" -f="xml"
 
       - name: Validate report
         run: |
