@@ -6,8 +6,8 @@ on:
       - joseCastro_p1_base
 
 env:
-  DOTNET_TOOLS_PATH: "./tools"
-  NUGET_PATH: "./packages"
+  DOTNET_TOOLS_PATH: tools
+  NUGET_PATH: packages
 
 jobs:
   ci-cd:
@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
-          
+
       - name: Restore dependencies
         run: dotnet restore
 
@@ -29,13 +29,12 @@ jobs:
 
       - name: Install JetBrains ReSharper tools
         run: |
-          mkdir -p $HOME/.dotnet/tools
-          dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path DOTNET_TOOLS_PATH
+          dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path ${{ env.DOTNET_TOOLS_PATH }}
 
       - name: Run code inspection
         run: |
-          mkdir -p myApp/reports
-          $HOME/.dotnet/tools/jb inspectcode ./TrainProject.sln -o=myApp/reports/report.xml
+          mkdir myApp\reports
+          .\${{ env.DOTNET_TOOLS_PATH }}\jb inspectcode .\TrainProject.sln -o=myApp\reports\report.xml
 
       - name: Validate report
         run: |
@@ -45,8 +44,8 @@ jobs:
       - name: Install coverage tools
         run: |
           cd myApp.Tests
-          mkdir -p reports
-          dotnet add package coverlet.msbuild --package-directory $NUGET_PATH
+          mkdir reports
+          dotnet add package coverlet.msbuild --package-directory ../${{ env.NUGET_PATH }}
 
       - name: Run unit tests with coverage
         run: |
@@ -61,16 +60,14 @@ jobs:
       - name: Generate HTML coverage report
         run: |
           cd myApp.Tests
-          dotnet tool install dotnet-reportgenerator-globaltool --tool-path DOTNET_TOOLS_PATH
-          $HOME/.dotnet/tools/reportgenerator -reports:reports/coverage.cobertura.xml -targetdir:reports/coveragereport -reporttypes:Html
+          dotnet tool install dotnet-reportgenerator-globaltool --tool-path ../${{ env.DOTNET_TOOLS_PATH }}
+          ../${{ env.DOTNET_TOOLS_PATH }}/reportgenerator -reports:reports/coverage.cobertura.xml -targetdir:reports/coveragereport -reporttypes:Html
 
       - name: Publish app
         run: |
           dotnet publish myApp/myApp.csproj -c Release -o ./publish
 
-      - name: Deploy to runner host
+      - name: Deploy to runner host (optional)
         run: |
-          mkdir -p $HOME/deployments/myApp
-          cp -r ./publish/* $HOME/deployments/myApp/
-          chmod +x $HOME/deployments/myApp/myApp
-          echo "Application deployed: $HOME/deployments/myApp"
+          mkdir deployments\myApp
+          xcopy .\publish\* deployments\myApp\ /E /Y
