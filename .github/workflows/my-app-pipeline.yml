@@ -65,9 +65,36 @@ jobs:
 
       - name: Publish app
         run: |
-          dotnet publish myApp/myApp.csproj -c Release -o ./publish
+          dotnet publish myApp/myApp.csproj -c Release -o myApp/publish
 
-      - name: Deploy to runner host (optional)
+      - name: Log in to Docker Hub
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PAT: ${{ secrets.DOCKER_PASSWORD }}
+        run: echo $DOCKER_PAT | docker login -u $DOCKER_USER --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/myapp:dev .
+
+      - name: Tag Docker image
+        run: docker tag ${{ secrets.DOCKER_USERNAME }}/myapp:dev ${{ secrets.DOCKER_USERNAME }}/myapp:v1.0.0
+
+      - name: Push Docker image
         run: |
-          mkdir deployments\myApp
-          xcopy .\publish\* deployments\myApp\ /E /Y
+          docker push ${{ secrets.DOCKER_USERNAME }}/myapp:dev
+          docker push ${{ secrets.DOCKER_USERNAME }}/myapp:v1.0.0
+
+  deploy-dev:
+    needs: ci-cd
+    runs-on: windows-latest
+    steps:
+      - name: Log in to Docker Hub
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PAT: ${{ secrets.DOCKER_PASSWORD }}
+        run: echo $DOCKER_PAT | docker login -u $DOCKER_USER --password-stdin
+
+      - name: Pull and run image from Docker Hub
+        run: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:v1.0.0
+          docker run --rm ${{ secrets.DOCKER_USERNAME }}/myapp:v1.0.0
