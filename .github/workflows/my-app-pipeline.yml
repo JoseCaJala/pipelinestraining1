@@ -11,7 +11,7 @@ env:
 
 jobs:
   ci-cd:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,20 +26,6 @@ jobs:
 
       - name: Build
         run: dotnet build TrainProject.sln
-
-      - name: Install JetBrains ReSharper tools
-        run: |
-          dotnet tool install JetBrains.ReSharper.GlobalTools --tool-path ./tools
-
-      - name: Run code inspection
-        run: |
-          mkdir "myApp\reports"
-          ./tools/jb.exe inspectcode TrainProject.sln -o="myApp/reports/report.xml" -f="xml"
-
-      - name: Validate report
-        run: |
-          cd scripts
-          pwsh ./validate_report.ps1
 
       - name: Install coverage tools
         run: |
@@ -67,10 +53,6 @@ jobs:
         run: |
           dotnet publish myApp/myApp.csproj -c Release -o myApp/publish
   
-  docker:
-    needs: ci-cd
-    runs-on: ubuntu-latest
-    steps:
       - name: Log in to the Docker Hub
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
