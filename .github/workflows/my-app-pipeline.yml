@@ -67,7 +67,7 @@ jobs:
         run: |
           dotnet publish myApp/myApp.csproj -c Release -o myApp/publish
 
-      - name: Log in to Docker Hub
+      - name: Log in to the Docker Hub
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PAT: ${{ secrets.DOCKER_PASSWORD }}
